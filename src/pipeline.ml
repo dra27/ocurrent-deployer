@@ -186,13 +186,13 @@ let _unikernel dockerfile ~target args services =
    For each build, it says which which branch gives the desired live version of
    the service, and where to deloy it. *)
 let v ~github ?notify:channel ~sched ~staging_auth () =
-  let github = match github with
-  | `App app -> `App (app, 12497518)
-  | `Api api -> `Api api
+  let github, set_status = match github with
+  | `App app -> `App (app, 12497518), true
+  | `Api api -> `Api api, false
   in
   let ocurrent = Build.org ~github "ocurrent" in
   let docker_services =
-    let build (org, name, builds) = Cluster_build.repo ?channel ~web_ui ~org ~name builds in
+    let build (org, name, builds) = Cluster_build.repo ?channel ~set_status ~web_ui ~org ~name builds in
     let sched = Current_ocluster.v ~timeout ?push_auth:staging_auth sched in
     let docker = docker ~sched in
     Current.all @@ List.map build [
@@ -229,7 +229,7 @@ let v ~github ?notify:channel ~sched ~staging_auth () =
       ];
     ]
   and mirage_unikernels =
-    let build (org, name, builds) = Build_unikernel.repo ?channel ~web_ui ~org ~name builds in
+    let build (org, name, builds) = Build_unikernel.repo ?channel ~set_status ~web_ui ~org ~name builds in
     Current.all @@ List.map build [
     ]
   in

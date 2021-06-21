@@ -47,7 +47,7 @@ module Make(T : S.T) = struct
     | Error (`Active _) -> Github.Api.Status.v ~url `Pending
     | Error (`Msg m)    -> Github.Api.Status.v ~url `Failure ~description:m
 
-  let repo ?channel ~web_ui ~org:(org, github) ~name build_specs =
+  let repo ?channel ~set_status ~web_ui ~org:(org, github) ~name build_specs =
     let repo_name = Printf.sprintf "%s/%s" org name in
     let repo = { Github.Repo_id.owner = org; name } in
     let root = Current.return ~label:repo_name () in      (* Group by repo in the diagram *)
@@ -56,6 +56,12 @@ module Make(T : S.T) = struct
       let refs = Github.Api.ci_refs github repo in
       let collapse_value = repo_name ^ "-builds" in
       let url = web_ui collapse_value in
+      let set_status =
+        if set_status then
+          Github.Api.Commit.set_status
+        else
+          fun _ _ -> Current.ignore_value
+      in
       let pipeline =
         refs
         |> Current.list_iter (module Github.Api.Commit) @@ fun commit ->
@@ -64,7 +70,7 @@ module Make(T : S.T) = struct
           build_specs |> List.map (fun (build_info, _deploys) -> T.build build_info src |> Current.ignore_value)
         )
         |> status_of_build ~url
-        |> Github.Api.Commit.set_status commit "deployability"
+        |> set_status commit "deployability"
       in
       Current.collapse
         ~key:"repo" ~value:collapse_value
