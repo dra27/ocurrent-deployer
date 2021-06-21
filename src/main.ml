@@ -36,9 +36,9 @@ let has_role user role =
 let main config mode app slack auth sched staging_password_file =
   let vat = Capnp_rpc_unix.client_only_vat () in
   let sched = Capnp_rpc_unix.Vat.import_exn vat sched in
-  let channel = read_channel_uri slack in
+  let channel = Option.map read_channel_uri slack in
   let staging_auth = staging_password_file |> Option.map (fun path -> staging_user, read_first_line path) in
-  let engine = Current.Engine.create ~config (Pipeline.v ~app ~notify:channel ~sched ~staging_auth) in
+  let engine = Current.Engine.create ~config (Pipeline.v ~app ?notify:channel ~sched ~staging_auth) in
   let authn = Option.map Current_github.Auth.make_login_uri auth in
   let has_role =
     if auth = None then Current_web.Site.allow_all
@@ -61,7 +61,7 @@ let main config mode app slack auth sched staging_password_file =
 open Cmdliner
 
 let slack =
-  Arg.required @@
+  Arg.value @@
   Arg.opt Arg.(some file) None @@
   Arg.info
     ~doc:"A file containing the URI of the endpoint for status updates"

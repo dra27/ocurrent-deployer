@@ -43,7 +43,7 @@ module Make(T : S.T) = struct
     | Error (`Active _) -> Github.Api.Status.v ~url `Pending
     | Error (`Msg m)    -> Github.Api.Status.v ~url `Failure ~description:m
 
-  let repo ~channel ~web_ui ~org:(org, github) ~name build_specs =
+  let repo ?channel ~web_ui ~org:(org, github) ~name build_specs =
     let repo_name = Printf.sprintf "%s/%s" org name in
     let repo = { Github.Repo_id.owner = org; name } in
     let root = Current.return ~label:repo_name () in      (* Group by repo in the diagram *)
@@ -67,6 +67,10 @@ module Make(T : S.T) = struct
         ~input:refs pipeline
     and deployments =
       let root = label "deployments" root in
+      let notify = match channel with
+      | None -> fun ~service:_ ~commit:_ ~repo:_ x -> x
+      | Some channel -> notify ~channel ~web_ui
+      in
       Current.with_context root @@ fun () ->
       Current.all (
         build_specs |> List.map (fun (build_info, deploys) ->
@@ -77,7 +81,7 @@ module Make(T : S.T) = struct
                   let src = Current.map Github.Api.Commit.id commit in
                   let notify_repo = Printf.sprintf "%s-%s-%s" repo_name service branch in
                   T.deploy build_info deploy_info src
-                  |> notify ~channel ~web_ui ~service ~commit ~repo:notify_repo
+                  |> notify ~service ~commit ~repo:notify_repo
                 )
             )
           )
