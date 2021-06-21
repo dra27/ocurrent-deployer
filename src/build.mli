@@ -1,8 +1,8 @@
 type org
 
 val org :
-  app:Current_github.App.t ->
-  account:string -> int -> org
+  github:[`App of Current_github.App.t * int | `Api of Current_github.Api.t] ->
+  string -> org
 (** Look up a GitHub organisation by ID. *)
 
 module Make(T : S.T) : sig

@@ -33,12 +33,12 @@ let has_role user role =
       ), _ -> true        (* These users have all roles *)
     | _ -> role = `Viewer
 
-let main config mode app slack auth sched staging_password_file =
+let main config mode github slack auth sched staging_password_file =
   let vat = Capnp_rpc_unix.client_only_vat () in
   let sched = Capnp_rpc_unix.Vat.import_exn vat sched in
   let channel = Option.map read_channel_uri slack in
   let staging_auth = staging_password_file |> Option.map (fun path -> staging_user, read_first_line path) in
-  let engine = Current.Engine.create ~config (Pipeline.v ~app ?notify:channel ~sched ~staging_auth) in
+  let engine = Current.Engine.create ~config (Pipeline.v ~github ?notify:channel ~sched ~staging_auth) in
   let authn = Option.map Current_github.Auth.make_login_uri auth in
   let has_role =
     if auth = None then Current_web.Site.allow_all
@@ -55,6 +55,14 @@ let main config mode app slack auth sched staging_password_file =
       Current_web.run ~mode site;
     ]
   end
+
+let main config mode app slack auth auth_api sched staging_password_file =
+  match app, auth_api with
+  | Some _, Some _
+  | None, None -> `Error (true, "Either --github-token-file or --github-private-key-file, \
+                                 --github-app-id, and --github-account-whitelist must be given")
+  | Some app, None -> `Ok (main config mode (`App app) slack auth sched staging_password_file)
+  | None, Some api -> `Ok (main config mode (`Api api) slack auth sched staging_password_file)
 
 (* Command-line parsing *)
 
@@ -86,9 +94,9 @@ let staging_password =
 
 let cmd =
   let doc = "build and deploy services from Git" in
-  Term.(const main $ Current.Config.cmdliner $ Current_web.cmdliner $
-        Current_github.App.cmdliner $ slack $ Current_github.Auth.cmdliner $
-        submission_service $ staging_password),
+  Term.(ret (const main $ Current.Config.cmdliner $ Current_web.cmdliner $
+        Current_github.App.cmdliner_opt $ slack $ Current_github.Auth.cmdliner $
+        Current_github.Api.cmdliner_opt $ submission_service $ staging_password)),
   Term.info "deploy" ~doc
 
 let () = Term.(exit @@ eval cmd)

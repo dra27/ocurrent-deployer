@@ -4,10 +4,14 @@ module Github = Current_github
 
 type org = string * Current_github.Api.t
 
-let org ~app ~account id =
+let org ~github account =
   let api =
-    Current_github.App.installation app ~account id
-    |> Current_github.Installation.api
+    match github with
+    | `App (app, id) ->
+      Current_github.App.installation app ~account id
+      |> Current_github.Installation.api
+    | `Api api ->
+      api
   in
   account, api
 
