@@ -2,22 +2,21 @@ open Current.Syntax
 
 module Github = Current_github
 
-type org = string * Current_github.Api.t option
+type org = string * bool * Current_github.Api.t option
 
 type github = [ `App of Current_github.App.t | `Api of Current_github.Api.t ]
 
-let account = fst
-let api = snd
+let account (account, _, _) = account
+let api (_, _, api) = api
 
 let org ?github ~account id =
-  let api =
-    github |> Option.map @@ function
-    | `App app ->
-      Current_github.App.installation app ~account id
-      |> Current_github.Installation.api
-    | `Api api -> api
-  in
-  account, api
+  match github with
+  | Some (`App app) ->
+      account, false, Some (Current_github.Installation.api @@ Current_github.App.installation app ~account id)
+  | Some (`Api api) ->
+      account, true, Some api
+  | None ->
+      account, true, None
 
 let head_of ?github repo name =
   let gref = `Ref ("refs/heads/" ^ name) in
@@ -61,7 +60,7 @@ module Make(T : S.T) = struct
     | Error (`Active _) -> Github.Api.CheckRunStatus.v ~url `Queued
     | Error (`Msg m)    -> Github.Api.CheckRunStatus.v ~url (`Completed (`Failure m)) ~summary:m
 
-  let repo ?channel ~web_ui ~org:(org, github) ?additional_build_args ~name build_specs =
+  let repo ?channel ~web_ui ~org:(org, is_dev, github) ?additional_build_args ~name build_specs =
     let repo_name = Printf.sprintf "%s/%s" org name in
     let repo = { Github.Repo_id.owner = org; name } in
     let root = Current.return ~label:repo_name () in      (* Group by repo in the diagram *)
@@ -81,7 +80,7 @@ module Make(T : S.T) = struct
             build_specs |> List.map (fun (build_info, _deploys) -> T.build ?additional_build_args build_info src |> Current.ignore_value)
           )
           |> status_of_build ~url
-          |> Github.Api.CheckRun.set_status commit "deployability"
+          |> (if is_dev then Current.ignore_value else Github.Api.CheckRun.set_status commit "deployability")
         in
         [Current.collapse
           ~key:"repo" ~value:collapse_value
