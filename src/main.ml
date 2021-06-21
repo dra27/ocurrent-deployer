@@ -39,17 +39,18 @@ let has_role user role =
     | _ -> role = `Viewer
 
 let main () config mode app slack auth staging_password_file flavour =
+  let github = `App app in
   let vat = Capnp_rpc_unix.client_only_vat () in
   let channel = read_channel_uri slack in
   let staging_auth = staging_password_file |> Option.map (fun path -> staging_user, read_first_line path) in
   let engine = match flavour with
     | Tarides sched -> 
        let sched = Current_ocluster.Connection.create (Capnp_rpc_unix.Vat.import_exn vat sched) in
-       Current.Engine.create ~config (Pipeline.tarides ~app ~notify:channel ~sched ~staging_auth)
+       Current.Engine.create ~config (Pipeline.tarides ~github ~notify:channel ~sched ~staging_auth)
     | OCaml sched -> 
        let sched = Current_ocluster.Connection.create (Capnp_rpc_unix.Vat.import_exn vat sched) in
-       Current.Engine.create ~config (Pipeline.ocaml_org ~app ~notify:channel ~sched ~staging_auth)
-    | Toxis -> Current.Engine.create ~config (Pipeline.toxis ~app ~notify:channel)
+       Current.Engine.create ~config (Pipeline.ocaml_org ~github ~notify:channel ~sched ~staging_auth)
+    | Toxis -> Current.Engine.create ~config (Pipeline.toxis ~github ~notify:channel)
   in
   let authn = Option.map Current_github.Auth.make_login_uri auth in
   let webhook_secret = Current_github.App.webhook_secret app in

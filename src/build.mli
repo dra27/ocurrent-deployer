@@ -1,7 +1,9 @@
 type org
 
+type github = [ `App of Current_github.App.t | `Api of Current_github.Api.t ]
+
 val org :
-  ?app:Current_github.App.t ->
+  ?github:github ->
   account:string -> int -> org
 (** [org ~app account installation] look up a GitHub organisation by ID.
     [installation] is ignored if [app] is [None].

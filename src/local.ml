@@ -12,17 +12,18 @@ let read_first_line path =
   Fun.protect (fun () -> input_line ch)
     ~finally:(fun () -> close_in ch)
 
-let main () config mode app sched staging_password_file repo flavour =
+let main () config mode github sched staging_password_file repo flavour =
   let filter = Option.map (=) repo in
   let vat = Capnp_rpc_unix.client_only_vat () in
   let sched = Current_ocluster.Connection.create (Capnp_rpc_unix.Vat.import_exn vat sched) in
   let staging_auth = staging_password_file |> Option.map (fun path -> staging_user, read_first_line path) in
   let engine = match flavour with
-    | `Tarides -> Current.Engine.create ~config (Pipeline.tarides ?app ~sched ~staging_auth ?filter)
-    | `OCaml -> Current.Engine.create ~config (Pipeline.ocaml_org ?app ~sched ~staging_auth ?filter)
-    | `Toxis -> Current.Engine.create ~config (Pipeline.toxis ?app)
+    | `Tarides -> Current.Engine.create ~config (Pipeline.tarides ?github ~sched ~staging_auth ?filter)
+    | `OCaml -> Current.Engine.create ~config (Pipeline.ocaml_org ?github ~sched ~staging_auth ?filter)
+    | `Toxis -> Current.Engine.create ~config (Pipeline.toxis ?github)
   in
-  let webhook_secret = Option.value ~default:webhook_secret @@ Option.map Current_github.App.webhook_secret app in
+  let webhook_secret =
+    Option.value ~default:webhook_secret @@ Option.map Current_github.App.webhook_secret (match github with Some (`App app) -> Some app | _ -> None) in
   let has_role = Current_web.Site.allow_all in
   let routes =
     Routes.(s "webhooks" / s "github" /? nil @--> Current_github.webhook ~engine ~webhook_secret ~has_role) ::
@@ -33,7 +34,13 @@ let main () config mode app sched staging_password_file repo flavour =
       Current.Engine.thread engine;  (* The main thread evaluating the pipeline. *)
       Current_web.run ~mode site;
     ]
-  end
+  end |> ignore (* XXX *)
+
+let main () config mode app auth_api sched staging_password_file repo flavour =
+  (* Always use auth_api if it's given (i.e. it overrides the app *)
+  match app, auth_api with
+  | _, Some api -> `Ok (main () config mode (Some (`Api api)) sched staging_password_file repo flavour)
+  | app, None -> `Ok (main () config mode (Option.map (fun app -> `App app) app) sched staging_password_file repo flavour)
 
 (* Command-line parsing *)
 open Cmdliner
@@ -64,8 +71,8 @@ let repo =
 
 let cmd =
   let doc = "build and deploy services from Git" in
-  let cmd_t = Term.(term_result (const main $ Logging.cmdliner $ Current.Config.cmdliner $ Current_web.cmdliner
-                    $ Current_github.App.cmdliner_opt $ submission_service $ staging_password $ repo $ Pipeline.Flavour.cmdliner)) in
+  let cmd_t = Term.(ret (const main $ Logging.cmdliner $ Current.Config.cmdliner $ Current_web.cmdliner
+                    $ Current_github.App.cmdliner_opt $ Current_github.Api.cmdliner_opt $ submission_service $ staging_password $ repo $ Pipeline.Flavour.cmdliner)) in
   let info = Cmd.info "deploy" ~doc in
   Cmd.v info cmd_t
 

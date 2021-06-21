@@ -8,7 +8,7 @@ module Flavour : sig
 end
 
 val tarides :
-  ?app:Current_github.App.t ->
+  ?github:Build.github ->
   ?notify:Current_slack.channel ->
   ?filter:(Current_github.Repo_id.t -> bool) ->
   sched:Current_ocluster.Connection.t ->
@@ -16,7 +16,7 @@ val tarides :
   unit -> unit Current.t
 
 val ocaml_org :
-  ?app:Current_github.App.t ->
+  ?github:Build.github ->
   ?notify:Current_slack.channel ->
   ?filter:(Current_github.Repo_id.t -> bool) ->
   sched:Current_ocluster.Connection.t ->
@@ -24,6 +24,6 @@ val ocaml_org :
   unit -> unit Current.t
 
 val toxis :
-  ?app:Current_github.App.t ->
+  ?github:Build.github ->
   ?notify:Current_slack.channel ->
   unit -> unit Current.t

@@ -4,14 +4,18 @@ module Github = Current_github
 
 type org = string * Current_github.Api.t option
 
+type github = [ `App of Current_github.App.t | `Api of Current_github.Api.t ]
+
 let account = fst
 let api = snd
 
-let org ?app ~account id =
+let org ?github ~account id =
   let api =
-    app |> Option.map @@ fun app ->
-    Current_github.App.installation app ~account id
-    |> Current_github.Installation.api
+    github |> Option.map @@ function
+    | `App app ->
+      Current_github.App.installation app ~account id
+      |> Current_github.Installation.api
+    | `Api api -> api
   in
   account, api
 

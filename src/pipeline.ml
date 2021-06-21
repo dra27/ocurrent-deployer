@@ -258,18 +258,18 @@ let build_kit (v : Cluster_api.Docker.Spec.options) = { v with buildkit = true }
    For each one, it lists the builds that are made from that repository.
    For each build, it says which which branch gives the desired live version of
    the service, and where to deploy it. *)
-let tarides ?app ?notify:channel ?filter ~sched ~staging_auth () =
+let tarides ?github ?notify:channel ?filter ~sched ~staging_auth () =
   (* [web_ui collapse_value] is a URL back to the deployment service, for links
      in status messages. *)
   let web_ui =
     let base = Uri.of_string "https://deploy.ci3.ocamllabs.io/" in
     fun repo -> Uri.with_query' base ["repo", repo] in
 
-  let tarides = Build.org ?app ~account:"tarides" 21197588 in
-  let ocurrent = Build.org ?app ~account:"ocurrent" 12497518 in
+  let tarides = Build.org ?github ~account:"tarides" 21197588 in
+  let ocurrent = Build.org ?github ~account:"ocurrent" 12497518 in
   (* TODO Uninstall deploy.ci3.ocamllabs.io from ocaml GitHub org. *)
-  (* let ocaml = Build.org ?app ~account:"ocaml" 18513252 in *)
-  let ocaml_bench = Build.org ?app ~account:"ocaml-bench" 19839896 in
+  (* let ocaml = Build.org ?github ~account:"ocaml" 18513252 in *)
+  let ocaml_bench = Build.org ?github ~account:"ocaml-bench" 19839896 in
 
   let build (org, name, builds) = Cluster_build.repo ?channel ~web_ui ~org ~name builds in
   let sched_regular = Current_ocluster.v ~timeout ?push_auth:staging_auth sched in
@@ -316,16 +316,16 @@ let tarides ?app ?notify:channel ?filter ~sched ~staging_auth () =
    For each one, it lists the builds that are made from that repository.
    For each build, it says which which branch gives the desired live version of
    the service, and where to deploy it. *)
-let ocaml_org ?app ?notify:channel ?filter ~sched ~staging_auth () =
+let ocaml_org ?github ?notify:channel ?filter ~sched ~staging_auth () =
   (* [web_ui collapse_value] is a URL back to the deployment service, for links
      in status messages. *)
   let web_ui =
     let base = Uri.of_string "https://deploy.ci.ocaml.org" in
     fun repo -> Uri.with_query' base ["repo", repo] in
-  let ocurrent = Build.org ?app ~account:"ocurrent" 23342906 in
-  let ocaml = Build.org ?app ~account:"ocaml" 23711648 in
-  let ocaml_opam = Build.org ?app ~account:"ocaml-opam" 23690708 in
-  let ocaml_opam_tmcgilchrist = Build.org ?app ~account:"tmcgilchrist" 23527376 in
+  let ocurrent = Build.org ?github ~account:"ocurrent" 23342906 in
+  let ocaml = Build.org ?github ~account:"ocaml" 23711648 in
+  let ocaml_opam = Build.org ?github ~account:"ocaml-opam" 23690708 in
+  let ocaml_opam_tmcgilchrist = Build.org ?github ~account:"tmcgilchrist" 23527376 in
 
   let build ?additional_build_args (org, name, builds) =
     Cluster_build.repo ?channel ?additional_build_args ~web_ui ~org ~name builds in
@@ -410,11 +410,11 @@ let unikernel dockerfile ~target args services =
     |> List.map (fun (branch, service) -> branch, { Packet_unikernel.service }) in
   (build_info, deploys)
 
-let toxis ?app ?notify:channel () =
+let toxis ?github ?notify:channel () =
   let web_ui =
     let base = Uri.of_string "https://deploy.ocamllabs.io/" in
     fun repo -> Uri.with_query' base ["repo", repo] in
-  let mirage = Build.org ?app ~account:"mirage" 7175142 in
+  let mirage = Build.org ?github ~account:"mirage" 7175142 in
   let build (org, name, builds) = Build_unikernel.repo ?channel ~web_ui ~org ~name builds in
   Current.all @@ List.map build [
     mirage, "mirage-www", [
