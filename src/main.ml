@@ -5,7 +5,7 @@ let () = Logging.init ()
 
 (* A low-security Docker Hub user used to push images to the staging area.
    Low-security because we never rely on the tags in this repository, just the hashes. *)
-let staging_user = "ocurrentbuilder"
+let staging_user = "dra27"
 
 let read_first_line path =
   let ch = open_in path in

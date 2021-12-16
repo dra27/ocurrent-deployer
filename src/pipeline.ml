@@ -4,9 +4,9 @@ module Github = Current_github
 
 let timeout = Duration.of_min 50    (* Max build time *)
 
-let password_path = "/run/secrets/ocurrent-hub"
+let password_path = "/home/dra/secrets/docker-ocurrent-deployer-testing"
 
-let push_repo = "ocurrentbuilder/staging"
+let push_repo = "dra27/staging"
 
 let auth =
   if Sys.file_exists password_path then (
@@ -14,7 +14,7 @@ let auth =
     let len = in_channel_length ch in
     let password = really_input_string ch len |> String.trim in
     close_in ch;
-    Some ("ocurrent", password)
+    Some ("dra27", password)
   ) else (
     Fmt.pr "Password file %S not found; images will not be pushed to hub@." password_path;
     None
@@ -196,7 +196,7 @@ let v ~github ?notify:channel ~sched ~staging_auth () =
     let sched = Current_ocluster.v ~timeout ?push_auth:staging_auth sched in
     let docker = docker ~sched in
     Current.all @@ List.map build [
-      ocurrent, "ocurrent-deployer", [
+      (*ocurrent, "ocurrent-deployer", [
         docker "Dockerfile"     ["live-ci3", "ocurrent/ci.ocamllabs.io-deployer:live-ci3", [`Ci3, "deployer_deployer"]];
       ];
       ocurrent, "ocaml-ci", [
@@ -206,12 +206,12 @@ let v ~github ?notify:channel ~sched ~staging_auth () =
       ];
       ocurrent, "docker-base-images", [
         docker "Dockerfile"     ["live", "ocurrent/base-images:live", [`Toxis, "base-images_builder"]];
-      ];      
+      ];*)
       ocurrent, "ocluster", [
-        docker "Dockerfile"        ["live-scheduler", "ocurrent/ocluster-scheduler:live", []];
-        docker "Dockerfile.worker" ["live-worker",    "ocurrent/ocluster-worker:live", []]
-          ~archs:[`Linux_x86_64; `Linux_arm64; `Linux_ppc64];
-      ];
+        docker "Dockerfile"        ["live-scheduler", "dra27/ocluster-scheduler:live", []];
+        docker "Dockerfile.worker" ["live-worker",    "dra27/ocluster-worker:live", []]
+          ~archs:[`Linux_x86_64(*; `Linux_arm64; `Linux_ppc64*)];
+      ];(*
       ocurrent, "opam-repo-ci", [
         docker "Dockerfile"     ["live", "ocurrent/opam-repo-ci:live", [`Ci3, "opam-repo-ci_opam-repo-ci"]];
         docker "Dockerfile.web" ["live-web", "ocurrent/opam-repo-ci-web:live", [`Ci3, "opam-repo-ci_opam-repo-ci-web"]];
@@ -226,11 +226,11 @@ let v ~github ?notify:channel ~sched ~staging_auth () =
         docker "docker/storage/Dockerfile"  ["live", "ocurrent/docs-ci-storage-server:live", [`Ci6, "infra_storage-server"]];
         docker "docker/git-http/Dockerfile" ["live", "ocurrent/docs-ci-git-http:live", [`Ci6, "infra_git-http"]];
         docker "Dockerfile.web"             ["live-web", "ocurrent/docs-ci-web:live", [`Ci6, "infra_docs-ci-web"]];
-      ];
+      ];*)
     ]
-  and mirage_unikernels =
+  and _mirage_unikernels =
     let build (org, name, builds) = Build_unikernel.repo ?channel ~set_status ~web_ui ~org ~name builds in
     Current.all @@ List.map build [
     ]
   in
-  Current.all [ docker_services; mirage_unikernels ]
+  Current.all [ docker_services(*; mirage_unikernels*) ]
