@@ -152,12 +152,9 @@ module Cluster = struct
   }
 
   (* Build [src/dockerfile] as a Docker service. *)
-  let build { sched; dockerfile; options; archs } ?(additional_build_args=Current.return []) src =
+  let build { sched; dockerfile; options; archs } ?additional_build_args src =
     let src = Current.map (fun x -> [x]) src in
-    Current.component "HEADs" |>
-    let** additional_build_args = additional_build_args in
-    let options = { options with build_args = additional_build_args @ options.build_args } in
-    let build_arch arch = Current_ocluster.build sched ~options ~pool:(pool_id arch) ~src dockerfile in
+    let build_arch arch = Current_ocluster.build sched ~options ?additional_build_args ~pool:(pool_id arch) ~src dockerfile in
     Current.all (List.map build_arch archs)
 
   let name info = Cluster_api.Docker.Image_id.to_string info.hub_id
@@ -182,17 +179,14 @@ module Cluster = struct
           Caddy.replace_hash_var ~hash:(D.Image.hash image) contents) image in
         D.compose ~name ~contents ()
 
-  let deploy { sched; dockerfile; options; archs } { hub_id; services } ?(additional_build_args=Current.return []) src =
+  let deploy { sched; dockerfile; options; archs } { hub_id; services } ?additional_build_args src =
     let src = Current.map (fun x -> [x]) src in
     let target_label = Cluster_api.Docker.Image_id.repo hub_id |> String.map (function '/' | ':' -> '-' | c -> c) in
-    Current.component "HEADs" |>
-    let** additional_build_args = additional_build_args in
-    let options = { options with build_args = additional_build_args @ options.build_args } in
     let build_arch arch =
       let pool = pool_id arch in
       let tag = Printf.sprintf "live-%s-%s" target_label pool in
       let push_target = Cluster_api.Docker.Image_id.v ~repo:push_repo ~tag in
-      Current_ocluster.build_and_push sched ~options ~push_target ~pool ~src dockerfile
+      Current_ocluster.build_and_push sched ~options ?additional_build_args ~push_target ~pool ~src dockerfile
     in
     let images = List.map build_arch archs in
     match auth with

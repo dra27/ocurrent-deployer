@@ -3,4 +3,4 @@
 	url = https://github.com/ocurrent/ocurrent.git
 [submodule "ocluster"]
 	path = ocluster
-	url = https://github.com/ocurrent/ocluster.git
+	url = https://github.com/dra27/ocluster.git
